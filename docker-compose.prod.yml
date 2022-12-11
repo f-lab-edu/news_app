@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - target: 8000
+        published: 8000
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py migrate && gunicorn ~~~"
+    environment:
+      - DB_HOST=123.123.123.123
+      - DB_NAME=proddb
+      - DB_USER=produser
+      - DB_PASS=changeme
