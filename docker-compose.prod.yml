@@ -10,7 +10,7 @@ services:
         protocol: tcp
         mode: ingress
     volumes:
-      - ./app:/app
+      - ./:/app
     command: >
       sh -c "python manage.py migrate && gunicorn ~~~"
     environment:
