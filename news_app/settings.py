@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'userPage',
     'weekUserTopic',
     'rest_framework',
+    'core'
 ]
 
 MIDDLEWARE = [
