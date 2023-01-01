@@ -26,7 +26,7 @@ class SignUpTest(APITestCase):
     def test_create_superuser(self):
         """test creating a superuser"""
         user = get_user_model().objects.create_superuser(
-            '01-0111--111',
+            '010-0111--1111',
             'aaaa',
             '11'
         )
