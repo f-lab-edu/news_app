@@ -3,13 +3,18 @@ from user.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    def create(self, validated_date):
-        user = User.objects.create_user(
-            phone=validated_date['phone'],
-            name=validated_date['name'],
-            password=validated_date['password']
-        )
-        return user
+    # def validate(self, valid_data):
+    #     pass
+    CATEGORY = (
+        ('Society', '사회'),
+        ('IT', 'IT'),
+        ('Politics', '정치'),
+        ('Economy', '경제')
+    )
+
+    category1 = serializers.ChoiceField(choices=CATEGORY)
+    category2 = serializers.ChoiceField(choices=CATEGORY)
+    category3 = serializers.ChoiceField(choices=CATEGORY)
 
     class Meta:
         model = User
