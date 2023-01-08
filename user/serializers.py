@@ -13,4 +13,4 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['phone', 'name', 'is_active', 'is_superuser']
+        fields = ['phone', 'name', 'category1', 'category2', 'category3']
