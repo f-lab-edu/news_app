@@ -1,3 +1,11 @@
+from rest_framework.test import APITestCase, APIClient
+from user.models import User
+from django.urls import reverse
+from rest_framework import status
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-# Create your tests here.
+import json
+
+CREATE_USER_URL = reverse('user-list')
+
