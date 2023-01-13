@@ -6,15 +6,38 @@ from django.contrib.auth.models import (
 )
 from django.core.validators import RegexValidator
 
+from django.db.models import Count
+
+from topic.models import Topic
+
 
 class UserManager(BaseUserManager):
     """Manager for users."""
 
-    def create(self, phone, name, password=None):
+    def create(self, phone, name, password, category1, category2, category3):
         user = self.model(phone=phone, name=name, password=password)
         user.set_password(password)
+
+        topic_queryset = Topic.objects.filter()
+        category1_cnt = topic_queryset.filter(category=category1).values('category', 'name').annotate(
+            category_cnt=Count('category')).order_by('category_cnt')[0]
+        category2_cnt = topic_queryset.filter(category=category2).values('category', 'name').annotate(
+            category_cnt=Count('category')).order_by('category_cnt')[0]
+        category3_cnt = topic_queryset.filter(category=category3).values('category', 'name').annotate(
+            category_cnt=Count('category')).order_by('category_cnt')[0]
+
+        topic1 = category1_cnt['name']
+        topic2 = category2_cnt['name']
+        topic3 = category3_cnt['name']
+
         user.save()
-        return user
+        return topic1, topic2, topic3
+        # return user
+
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        return self._create_user(username, email, password, **extra_fields)
 
 
 class User(AbstractUser, PermissionsMixin):
