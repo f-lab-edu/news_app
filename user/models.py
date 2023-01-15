@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
 from django.core.validators import RegexValidator
 
 from django.db.models import Count
+from django.db import transaction
 
 from topic.models import Topic
 
@@ -14,6 +15,7 @@ from topic.models import Topic
 class UserManager(BaseUserManager):
     """Manager for users."""
 
+    @transaction.atomic()
     def create(self, phone, name, password, category1, category2, category3):
         user = self.model(phone=phone, name=name, password=password)
         user.set_password(password)
@@ -32,12 +34,6 @@ class UserManager(BaseUserManager):
 
         user.save()
         return topic1, topic2, topic3
-        # return user
-
-    def create_user(self, username, email=None, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', False)
-        extra_fields.setdefault('is_superuser', False)
-        return self._create_user(username, email, password, **extra_fields)
 
 
 class User(AbstractUser, PermissionsMixin):
