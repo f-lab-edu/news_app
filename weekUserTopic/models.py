@@ -6,4 +6,4 @@ import datetime
 class WeekUserTopic(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    weeks = models.IntegerField()
+    weeks = models.IntegerField(null=True)
