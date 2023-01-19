@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'userPage',
     'weekUserTopic',
     'rest_framework',
-    'core'
+    'core',
+    'django_crontab'
 ]
 
 MIDDLEWARE = [
@@ -132,3 +133,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = 'user.User'
+
+CRONJOBS = [
+    ('* 22 * * 7', 'utils.news_utils.insert_db', '>> /tmp/log/cron.log'),
+]
