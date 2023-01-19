@@ -6,4 +6,3 @@ bs4
 konlpy
 pandas
 nltk
-numpy==12.5
