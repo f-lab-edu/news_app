@@ -36,8 +36,7 @@ services:
 
   cron:
     command: >
-      sh -c "service cron start &&
-             python manage.py crontab add &&
+      sh -c "python manage.py crontab add &&
              tail -f /dev/null"
     depends_on:
       - app
