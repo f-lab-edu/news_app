@@ -34,6 +34,14 @@ services:
       - POSTGRES_USER=devuser
       - POSTGRES_PASSWORD=changeme
 
+  cron:
+    command: >
+      sh -c "service cron start &&
+             python manage.py crontab add &&
+             tail -f /dev/null"
+    depends_on:
+      - app
+
 
 volumes:
   dev-db-data:
