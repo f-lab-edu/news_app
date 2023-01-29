@@ -1,8 +1,15 @@
+import collections
+
 from category.models import Category
 from topic.models import Topic
 from news.models import News
+from weekUserTopic.models import WeekUserTopic
+from user.models import User
+from userNews.models import UserNews
+from userPage.models import UserPage
 
 from django.db import transaction
+from django.db.models import Max
 
 from bs4 import BeautifulSoup
 
@@ -154,8 +161,35 @@ def insert_db():
         if not topic:
             topic_list.append(Topic(category=li['category'], name=li['topic']))
         news_list.append(News(topic1=li['topic'], topic2=li['topic'], topic3=li['topic'], link=li['url']))
+    # 읽은 시간 업데이트 되면서 다음주 주차별 유저 토픽도 3개 새롭게 업데이트 됨.
+    # To-Do
 
+    # 토픽 생성
+    # 뉴스 생성
     Topic.objects.bulk_create(topic_list)
     News.objects.bulk_create(news_list)
 
+    # 주차별 유저 토픽 생성된 것으로
+    # 연결된 유저 뉴스 3개씩 생성
+    # 유저 뉴스 3개 생성 후 유저 페이지 생성
+    week_user_topic_queryset = WeekUserTopic.objects.filter()
+    news_queryset = News.objects.filiter()
+    week_user_topics = week_user_topic_queryset.all()
+
+    user_news_list = []
+    user_news_dict = collections.defaultdict(list)
+    for week_user_topic in week_user_topics:
+        news = news_queryset.filter(topic1=week_user_topic['topic']).orderby('-created_at')
+        user_news_list.append(UserNews(news=news['id'], week_user_topic=week_user_topic['topic']))
+        user_news_dict[week_user_topic['user']].append(UserNews(news=news['id'], week_user_topic=week_user_topic['topic']))
+
+    UserNews.objects.bulk_create(user_news_list)
+
+    user_page_list = []
+    for user_id, user_news_list in user_news_dict.items():
+        user_page_list.append(UserPage(user_news1=user_news_list[0]['news'],
+                                       user_news2=user_news_list[1]['news'],
+                                       user_news3=user_news_list[2]['news']))
+
+    UserPage.objects.bulk_create(user_page_list)
     print('end')
