@@ -1,5 +1,3 @@
-import collections
-
 from category.models import Category
 from topic.models import Topic
 from news.models import News
@@ -9,10 +7,10 @@ from userNews.models import UserNews
 from userPage.models import UserPage
 
 from django.db import transaction
-from django.db.models import Max
 
 from bs4 import BeautifulSoup
 
+import collections
 import urllib
 import json
 import urllib.request
@@ -22,6 +20,19 @@ import nltk
 import tensorflow as tf
 import numpy as np
 import environ
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+file_handler = logging.FileHandler('../log/news_utils.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 tf.random.set_seed(777)
 env = environ.Env(
@@ -172,8 +183,9 @@ def insert_db():
     # 주차별 유저 토픽 생성된 것으로
     # 연결된 유저 뉴스 3개씩 생성
     # 유저 뉴스 3개 생성 후 유저 페이지 생성
-    news_queryset = News.objects.all()
-    week_user_topics = WeekUserTopic.objects.all()
+    news_queryset = News.objects.filter()
+    current_week = WeekUserTopic.objects.filter().orderby('-weeks').values[0]
+    week_user_topics = WeekUserTopic.objects.filter(weeks=current_week)
 
     user_news_contents = []
     user_news_of_topic = collections.defaultdict(list)
@@ -181,7 +193,7 @@ def insert_db():
         news = news_queryset.filter(topic1=week_user_topic['topic']).orderby('-created_at')
         user_news_contents.append(UserNews(news=news['id'], week_user_topic=week_user_topic['topic']))
         if not news:
-            raise Exception('News가 존재하지 않습니다.')
+            raise logger.error('News가 존재하지 않습니다.')
         user_news_of_topic[week_user_topic['user']].append(UserNews(news=news['id'], week_user_topic=week_user_topic['topic']))
 
     UserNews.objects.bulk_create(user_news_contents)
@@ -193,4 +205,5 @@ def insert_db():
                                            user_news3=user_news_content[2]['news']))
 
     UserPage.objects.bulk_create(user_page_contents)
-    print('end')
+
+    logger.info('new_utils end.')
