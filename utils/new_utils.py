@@ -1,11 +1,16 @@
 from category.models import Category
 from topic.models import Topic
 from news.models import News
+from weekUserTopic.models import WeekUserTopic
+from user.models import User
+from userNews.models import UserNews
+from userPage.models import UserPage
 
 from django.db import transaction
 
 from bs4 import BeautifulSoup
 
+import collections
 import urllib
 import json
 import urllib.request
@@ -15,6 +20,19 @@ import nltk
 import tensorflow as tf
 import numpy as np
 import environ
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+file_handler = logging.FileHandler('../log/news_utils.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 tf.random.set_seed(777)
 env = environ.Env(
@@ -25,8 +43,8 @@ env = environ.Env(
 # ** 각 함수 생성 **
 # 카테고리 가져오기
 def get_category():
-    category_list = Category.objects.values_list('name', flat=True)
-    return category_list
+    categories = Category.objects.values_list('name', flat=True)
+    return categories
 
 
 def search_news(category):
@@ -54,10 +72,10 @@ def search_news(category):
 # 뉴스 1개씩 검색
 # 카테고리 사용하여 검색 상단 뉴스를 가져온다 (쿼리로 해결)
 def get_category_info():
-    category_list = get_category()
+    categories = get_category()
     url_links = []
     descriptions = []
-    for category in category_list:
+    for category in categories:
         items = search_news(category)
         url_links.append(items['link'])
         descriptions = items['description']
@@ -120,8 +138,8 @@ def get_embedding_topic(word_index, embedding_description_list):
 
 
 # 뉴스에서 토픽을 추출한다.
-def extract_topic():
-    extract_list = []
+def extract_topic_info():
+    topics_info = []
     labels = env('CATEGORY_LABEL')
     tokenizer = tf.keras.preprocessing.text.Tokenizer()
     model = tf.keras.models.load_model('utils/model.h5')
@@ -137,25 +155,55 @@ def extract_topic():
         predict = model.predict(padding_words)
 
         result_label = labels[predict[0].argmax()]
-        extract_list.append({'category': result_label, 'topic': result_topic, 'link': url, 'des': des})
+        topics_info.append({'category': result_label, 'topic': result_topic, 'link': url, 'des': des})
 
-    return extract_list
+    return topics_info
 
 
 # 토픽에 해당하는 뉴스를 db에 삽입
 @transaction.atomic
 def insert_db():
 
-    extract_list = extract_topic()
-    news_list = []
-    topic_list = []
-    for li in extract_list:
-        topic = Topic.objects.filter(category=li['category'], name=li['topic'])
+    topic_info = extract_topic_info()
+    news_contents = []
+    topic_contents = []
+    for info in topic_info:
+        topic = Topic.objects.filter(category=info['category'], name=info['topic'])
         if not topic:
-            topic_list.append(Topic(category=li['category'], name=li['topic']))
-        news_list.append(News(topic1=li['topic'], topic2=li['topic'], topic3=li['topic'], link=li['url']))
+            topic_contents.append(Topic(category=info['category'], name=info['topic']))
+        news_contents.append(News(topic1=info['topic'], topic2=info['topic'], topic3=info['topic'], link=info['url']))
+    # 읽은 시간 업데이트 되면서 다음주 주차별 유저 토픽도 3개 새롭게 업데이트 됨.
+    # To-Do
 
-    Topic.objects.bulk_create(topic_list)
-    News.objects.bulk_create(news_list)
+    # 토픽 생성
+    # 뉴스 생성
+    Topic.objects.bulk_create(topic_contents)
+    News.objects.bulk_create(news_contents)
 
-    print('end')
+    # 주차별 유저 토픽 생성된 것으로
+    # 연결된 유저 뉴스 3개씩 생성
+    # 유저 뉴스 3개 생성 후 유저 페이지 생성
+    news_queryset = News.objects.filter()
+    current_week = WeekUserTopic.objects.filter().orderby('-weeks').values[0]
+    week_user_topics = WeekUserTopic.objects.filter(weeks=current_week)
+
+    user_news_contents = []
+    user_news_of_topic = collections.defaultdict(list)
+    for week_user_topic in week_user_topics:
+        news = news_queryset.filter(topic1=week_user_topic['topic']).orderby('-created_at')
+        user_news_contents.append(UserNews(news=news['id'], week_user_topic=week_user_topic['topic']))
+        if not news:
+            raise logger.error('News가 존재하지 않습니다.')
+        user_news_of_topic[week_user_topic['user']].append(UserNews(news=news['id'], week_user_topic=week_user_topic['topic']))
+
+    UserNews.objects.bulk_create(user_news_contents)
+
+    user_page_contents = []
+    for user_news_content in user_news_of_topic.values():
+        user_page_contents.append(UserPage(user_news1=user_news_content[0]['news'],
+                                           user_news2=user_news_content[1]['news'],
+                                           user_news3=user_news_content[2]['news']))
+
+    UserPage.objects.bulk_create(user_page_contents)
+
+    logger.info('new_utils end.')
